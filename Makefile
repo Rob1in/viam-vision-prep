@@ -1,9 +1,6 @@
-.PHONY: setup clean pyinstaller
+.PHONY: setup clean tests
 
-MODULE_DIR=$(shell pwd)
-BUILD=$(MODULE_DIR)/build
-
-VENV_DIR=$(BUILD)/.venv
+VENV_DIR=.venv
 PYTHON=$(VENV_DIR)/bin/python
 
 # NEED TO FIGURE OUT THE BUILD FOR DIFFERENT HARDWARE BUT COMMENTS WILL BE NECESSARY FOR
@@ -21,9 +18,10 @@ REQUIREMENTS=requirements.txt
 	
 $(VENV_DIR):
 	@echo "Building python venv"
-	sudo apt install python3.10-venv
-	sudo apt install python3-pip
 	python3 -m venv $(VENV_DIR)
+
+venv: $(VENV_DIR)
+
 	
 
 # $(BUILD)/$(PYTORCH_WHEEL):
@@ -48,9 +46,10 @@ $(VENV_DIR):
 # 	cd $(BUILD)/torchvision && $(PYTHON) setup.py --verbose bdist_wheel --dist-dir ../
 
 # torchvision-wheel: $(BUILD)/$(TORCHVISION_WHEEL)
+tests:
+	$(PYTHON) -m pytest
 
-
-setup: 
+setup: $(VENV_DIR)
 	export PYTHONPATH=$(pwd)
 	$(PYTHON) -m pip install -r $(REQUIREMENTS)
 	pip install -e .

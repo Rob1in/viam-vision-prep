@@ -2,3 +2,4 @@ viam-sdk==0.38.0
 torch
 torchvision
 pillow
+pytest

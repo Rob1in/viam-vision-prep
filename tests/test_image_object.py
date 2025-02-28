@@ -7,7 +7,7 @@ from torch import Tensor
 from viam.media.utils.pil import pil_to_viam_image
 from viam.media.video import CameraMimeType
 
-from vvp.image_object import ImageObject
+from vvp.image_object import ImageObject, TargetType  # Import InputType
 
 
 @pytest.fixture
@@ -67,38 +67,38 @@ def image_object(sample_pil_image) -> ImageObject:
 
 
 def test_lazy_np_array_initially_none(image_object):
-    """Test that _np_array is None at initialization."""
-    assert image_object._np_array is None
+    """Test that np_array is not in the cache at initialization."""
+    assert image_object._cached_values[TargetType.NP_ARRAY] is None
 
 
 def test_lazy_np_array_computed_on_access(image_object):
-    """Test that _np_array is computed only when accessed."""
+    """Test that np_array is computed only when accessed."""
     _ = image_object.np_array  # Accessing should trigger computation
-    assert image_object._np_array is not None
+    assert TargetType.NP_ARRAY in image_object._cached_values
     assert isinstance(image_object.np_array, np.ndarray)
 
 
 def test_lazy_uint8_tensor_initially_none(image_object):
-    """Test that _uint8_tensor is None at initialization."""
-    assert image_object._uint8_tensor is None
+    """Test that uint8_tensor is not in the cache at initialization."""
+    assert image_object._cached_values[TargetType.UINT8_TENSOR] is None
 
 
 def test_lazy_uint8_tensor_computed_on_access(image_object):
-    """Test that _uint8_tensor is computed only when accessed."""
+    """Test that uint8_tensor is computed only when accessed."""
     _ = image_object.uint8_tensor  # Trigger computation
-    assert image_object._uint8_tensor is not None
+    assert TargetType.UINT8_TENSOR in image_object._cached_values
     assert isinstance(image_object.uint8_tensor, Tensor)
 
 
 def test_lazy_float32_tensor_initially_none(image_object):
-    """Test that _float32_tensor is None at initialization."""
-    assert image_object._float32_tensor is None
+    """Test that float32_tensor is not in the cache at initialization."""
+    assert image_object._cached_values[TargetType.FLOAT32_TENSOR] is None
 
 
 def test_lazy_float32_tensor_computed_on_access(image_object):
-    """Test that _float32_tensor is computed only when accessed."""
+    """Test that float32_tensor is computed only when accessed."""
     _ = image_object.float32_tensor  # Trigger computation
-    assert image_object._float32_tensor is not None
+    assert TargetType.FLOAT32_TENSOR in image_object._cached_values
     assert isinstance(image_object.float32_tensor, Tensor)
 
 

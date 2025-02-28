@@ -7,6 +7,20 @@ from PIL import Image
 from viam.media.video import ViamImage  # Assuming this is the correct import
 
 
+class TargetType:
+    """Defines the possible image representations within an ImageObject."""
+
+    NP_ARRAY = "np_array"
+    UINT8_TENSOR = "uint8_tensor"
+    FLOAT32_TENSOR = "float32_tensor"
+    PIL_IMAGE = "pil_image"
+
+    @classmethod
+    def valid_types(cls):
+        """Returns a set of valid input types."""
+        return {cls.NP_ARRAY, cls.UINT8_TENSOR, cls.FLOAT32_TENSOR}
+
+
 def get_tensor_from_np_array(
     np_array: np.ndarray, dtype: Literal["uint8", "float32"]
 ) -> torch.Tensor:
@@ -38,14 +52,18 @@ class ImageObject:
     It allows initialization from different sources such as ViamImage, PIL Image, or raw bytes.
     """
 
-    def __init__(self, pil_image=None, device: Optional[str] = None):
+    def __init__(
+        self, pil_image: Optional[Image.Image] = None, device: Optional[str] = None
+    ):
         """
         Private constructor. Use factory methods to create instances.
         """
         self._pil_image = pil_image
-        self._np_array = None
-        self._uint8_tensor = None
-        self._float32_tensor = None
+        self._cached_values = {  # Dictionary to hold lazy-loaded attributes
+            TargetType.NP_ARRAY: None,
+            TargetType.UINT8_TENSOR: None,
+            TargetType.FLOAT32_TENSOR: None,
+        }
         self.device = torch.device(
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
@@ -57,7 +75,7 @@ class ImageObject:
         return cls(pil_image=pil_image, device=device)
 
     @classmethod
-    def from_pil_image(cls, pil_image: Image, device: Optional[str] = None):
+    def from_pil_image(cls, pil_image: Image.Image, device: Optional[str] = None):
         """Creates an ImageObject from a PIL Image."""
         return cls(pil_image=pil_image, device=device)
 
@@ -68,31 +86,50 @@ class ImageObject:
         return cls(pil_image=pil_image, device=device)
 
     @property
-    def pil_image(self) -> Image:
+    def pil_image(self) -> Image.Image:
         """Returns the PIL image."""
         return self._pil_image
 
+    def get(self, attr: str):
+        """
+        Generic lazy-evaluation getter for image representations. PIL Image should always be available.
+
+        Args:
+            attr (str): One of "np_array", "uint8_tensor", or "float32_tensor".
+
+        Returns:
+            The computed or cached image representation.
+        """
+        if attr not in self._cached_values:
+            raise ValueError(
+                f"Invalid attribute '{attr}'. Choose from: {list(self._cached_values.keys())}"
+            )
+
+        if self._cached_values[attr] is None:
+            if attr == TargetType.NP_ARRAY:
+                self._cached_values[attr] = np.array(self._pil_image, dtype=np.uint8)
+            elif attr == TargetType.UINT8_TENSOR:
+                self._cached_values[attr] = get_tensor_from_np_array(
+                    self.get(TargetType.NP_ARRAY), "uint8"
+                ).to(self.device)
+            elif attr == TargetType.FLOAT32_TENSOR:
+                self._cached_values[attr] = get_tensor_from_np_array(
+                    self.get(TargetType.NP_ARRAY), "float32"
+                ).to(self.device)
+
+        return self._cached_values[attr]
+
     @property
     def np_array(self) -> np.ndarray:
-        """Lazily computes and returns the NumPy array representation of the image."""
-        if self._np_array is None:
-            self._np_array = np.array(self._pil_image, dtype=np.uint8)
-        return self._np_array
+        """Returns the NumPy array representation of the image, computed lazily."""
+        return self.get(TargetType.NP_ARRAY)
 
     @property
     def uint8_tensor(self) -> torch.Tensor:
-        """Lazily computes and returns the uint8 tensor representation of the image."""
-        if self._uint8_tensor is None:
-            self._uint8_tensor = get_tensor_from_np_array(self.np_array, "uint8").to(
-                self.device
-            )
-        return self._uint8_tensor
+        """Returns the uint8 tensor representation of the image, computed lazily."""
+        return self.get(TargetType.UINT8_TENSOR)
 
     @property
     def float32_tensor(self) -> torch.Tensor:
-        """Lazily computes and returns the float32 tensor representation of the image."""
-        if self._float32_tensor is None:
-            self._float32_tensor = get_tensor_from_np_array(
-                self.np_array, "float32"
-            ).to(self.device)
-        return self._float32_tensor
+        """Returns the float32 tensor representation of the image, computed lazily."""
+        return self.get(TargetType.FLOAT32_TENSOR)
