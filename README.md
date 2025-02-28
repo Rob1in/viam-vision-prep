@@ -1,6 +1,14 @@
 # viam-vision-prep
 Viam Vision Prep (VVP): Preprocessing library for Viam Vision Services Inputs.
 
+## Installation
+Run
+
+```
+make setup
+```
+
+
 ## **Configuring the Transform Pipeline with JSON**  
 
 The `Transform` class allows you to define an image processing pipeline using a **JSON-like configuration**.  
@@ -51,9 +59,13 @@ import torch
 
 # Define JSON pipeline
 pipeline_config = [
-    {"name": "Resize", "params": {"size": [256, 256]}},
-    {"name": "ToTensor"},
-    {"name": "Normalize", "params": {"mean": [0.5], "std": [0.5]}},
+    "device": "cpu",
+    "jit_script": False,
+    "pipeline":[
+        {"name": "Resize", "params": {"size": [256, 256]}},
+        {"name": "Normalize", "params": {"mean": [0.5], "std": [0.5]}},
+    ]
+    
 ]
 
 # Initialize Transform class with JSON config
@@ -71,7 +83,6 @@ Here are the transformations you can use in your JSON config:
 | Transform Name    | Description                          | Parameters |
 |------------------|----------------------------------|------------|
 | `Resize`         | Resizes image to a specified size | `size` (tuple or int) – Target size |
-| `ToTensor`       | Converts image to a tensor       | No parameters |
 | `Normalize`      | Normalizes pixel values          | `mean` (list of floats), `std` (list of floats) |
 | `Grayscale`      | Converts image to grayscale      | `num_output_channels` (1 or 3, default: 1) |
 
