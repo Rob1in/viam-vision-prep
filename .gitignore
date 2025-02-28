@@ -1,0 +1,3 @@
+/.venv/
+*/__pycache__/
+vvp/vvp.egg-info/
